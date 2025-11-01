@@ -17,7 +17,6 @@ import queue
 from enum import Enum
 from multiprocessing import Pool, cpu_count
 from typing import Union
-from pathlib import Path
 from platform import uname
 from datetime import datetime
 import hardnested_utils
@@ -28,6 +27,7 @@ from chameleon_utils import (
     ArgumentParserNoExit,
     ArgsParserError,
     UnexpectedResponseError,
+    default_cwd,
     execute_tool,
     tqdm_if_exists,
     print_key_table,
@@ -66,8 +66,6 @@ type_id_SAK_dict = {
     0x28: "SmartMX with MIFARE Classic 1K",
     0x38: "SmartMX with MIFARE Classic 4K",
 }
-
-default_cwd = Path.cwd() / Path(__file__).with_name("bin")
 
 
 def load_key_file(import_key, keys):
