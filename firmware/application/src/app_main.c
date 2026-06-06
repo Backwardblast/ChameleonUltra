@@ -72,6 +72,7 @@ static uint32_t m_gpregret_val;
 
 #define GPREGRET_CLEAR_VALUE_DEFAULT (0xFFFFFFFFUL)
 #define RESET_ON_LF_FIELD_EXISTS_Msk (1UL)
+#define CUV2_DFU_RETURN_MARKER (0x04)
 
 extern bool g_is_low_battery_shutdown;
 
@@ -1052,7 +1053,9 @@ int main(void) {
 
     check_wakeup_src();       // Detect wake-up source and decide BLE broadcast and subsequent hibernation action according to the wake-up source
     if ((m_reset_source & NRF_POWER_RESETREAS_DOG_MASK) &&
-            !(m_reset_source & NRF_POWER_RESETREAS_SREQ_MASK)) {
+            !(m_reset_source & NRF_POWER_RESETREAS_SREQ_MASK) &&
+            !(m_gpregret_val & CUV2_DFU_RETURN_MARKER) &&
+            !settings_was_migrated()) {
         settings_increment_watchdog_reset_count();
         settings_save_config();
     }

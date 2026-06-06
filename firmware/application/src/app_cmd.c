@@ -152,8 +152,10 @@ static data_frame_tx_t *cmd_processor_enter_bootloader(uint16_t cmd, uint16_t st
 #define BOOTLOADER_DFU_GPREGRET_MASK            (0xB0)
 #define BOOTLOADER_DFU_START_BIT_MASK           (0x01)
 #define BOOTLOADER_DFU_START    (BOOTLOADER_DFU_GPREGRET_MASK |         BOOTLOADER_DFU_START_BIT_MASK)
+#define CUV2_DFU_RETURN_MARKER                   (0x04)
     APP_ERROR_CHECK(sd_power_gpregret_clr(0, 0xffffffff));
     APP_ERROR_CHECK(sd_power_gpregret_set(0, BOOTLOADER_DFU_START));
+    APP_ERROR_CHECK(sd_power_gpregret_set(1, CUV2_DFU_RETURN_MARKER));
     nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_DFU);
     // Never into here...
     while (1) __NOP();

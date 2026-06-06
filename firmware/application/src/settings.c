@@ -15,6 +15,7 @@ NRF_LOG_MODULE_REGISTER();
 static settings_data_t config;
 static uint16_t m_config_crc;
 static bool m_ble_pairing_enable_first_load_value;
+static bool m_config_was_migrated;
 
 static void update_config_crc(void) {
     calc_14a_crc_lut((uint8_t *)&config, sizeof(config), (uint8_t *)&m_config_crc);
@@ -110,6 +111,9 @@ void settings_migrate(void) {
             // Version 8 counted normal DFU exits as watchdog resets.
             settings_init_watchdog_reset_count();
 
+        case 9:
+            settings_init_watchdog_reset_count();
+
             /*
              * Add new migration steps ABOVE THIS COMMENT
              * `settings_update_version_for_config()` and `break` statements should only be used on the last migration step, all the previous steps must fall
@@ -140,6 +144,7 @@ void settings_load_config(void) {
         settings_init_config();
     }
     if (config.version < SETTINGS_CURRENT_VERSION) {
+        m_config_was_migrated = true;
         NRF_LOG_INFO("Config version (%d) is not latest, performing migration to %d", config.version, SETTINGS_CURRENT_VERSION);
         settings_migrate();
     }
@@ -347,4 +352,8 @@ uint32_t settings_get_watchdog_reset_count(void) {
 
 void settings_increment_watchdog_reset_count(void) {
     config.watchdog_reset_count++;
+}
+
+bool settings_was_migrated(void) {
+    return m_config_was_migrated;
 }

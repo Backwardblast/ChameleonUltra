@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#define SETTINGS_CURRENT_VERSION 9
+#define SETTINGS_CURRENT_VERSION 10
 #define SETTINGS_SLEEP_TIMEOUT_DEFAULT_S 8   // default wake timeout in seconds (matches SLEEP_DELAY_MS_BUTTON_WAKEUP)
 #define SETTINGS_SLEEP_TIMEOUT_MIN_S      5
 #define SETTINGS_SLEEP_TIMEOUT_MAX_S      60
@@ -97,4 +97,5 @@ void settings_set_long_press_threshold(uint16_t duration);
 void settings_init_long_press_threshold_config(void);
 uint32_t settings_get_watchdog_reset_count(void);
 void settings_increment_watchdog_reset_count(void);
+bool settings_was_migrated(void);
 #endif
