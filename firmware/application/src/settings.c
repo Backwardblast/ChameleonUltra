@@ -106,6 +106,10 @@ void settings_migrate(void) {
         case 7:
             settings_init_watchdog_reset_count();
 
+        case 8:
+            // Version 8 counted normal DFU exits as watchdog resets.
+            settings_init_watchdog_reset_count();
+
             /*
              * Add new migration steps ABOVE THIS COMMENT
              * `settings_update_version_for_config()` and `break` statements should only be used on the last migration step, all the previous steps must fall

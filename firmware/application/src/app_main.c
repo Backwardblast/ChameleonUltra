@@ -1051,7 +1051,8 @@ int main(void) {
     on_data_frame_complete(on_data_frame_received);
 
     check_wakeup_src();       // Detect wake-up source and decide BLE broadcast and subsequent hibernation action according to the wake-up source
-    if (m_reset_source & NRF_POWER_RESETREAS_DOG_MASK) {
+    if ((m_reset_source & NRF_POWER_RESETREAS_DOG_MASK) &&
+            !(m_reset_source & NRF_POWER_RESETREAS_SREQ_MASK)) {
         settings_increment_watchdog_reset_count();
         settings_save_config();
     }
