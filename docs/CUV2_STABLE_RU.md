@@ -1,38 +1,69 @@
-# CUv2 Stable
+# CUv2 Stable v2.2.0-cuv2.1
 
-CUv2 Stable is a conservative downstream build based on upstream commit
-`1a014f9` from May 15, 2026.
+Консервативная сборка на базе upstream-коммита `1a014f9` от 15 мая
+2026 года.
 
-## Included changes
+## Что добавлено
 
-- PR #274: more accurate MIFARE Classic state transitions and access checks.
-- PR #404: tested Jablotron LF read, emulation and T55xx support.
-- PR #246: configurable long-button threshold.
-- PR #434: non-interactive CLI mode and portable hardware tests.
-- PRs #423-#426: MIFARE dump, dictionary and hardnested fallback fixes.
-- PR #317: correct bundled tool lookup in PyInstaller builds.
-- Command ID collision test and removal of duplicate firmware definitions.
+- PR #274: более точные состояния MIFARE Classic и проверка access bits.
+- PR #404: проверенная поддержка чтения и эмуляции Jablotron LF и T55xx.
+- PR #246: настраиваемый порог долгого нажатия кнопок.
+- PR #434: неинтерактивный режим CLI и переносимые аппаратные тесты.
+- PR #423-#426: исправления дампов и словарей MIFARE, fallback на hardnested.
+- PR #317: корректный поиск встроенных утилит в PyInstaller-сборке.
+- Проверка коллизий ID команд и удаление дублирующихся определений.
 
-## Safe flashing
+## Безопасная установка
 
-Use only `ultra-dfu-app.zip` for a normal Chameleon Ultra update. This package
-updates the application and does not replace the bootloader or SoftDevice.
-Do not use a Lite package on an Ultra.
+Для обычного Chameleon Ultra используйте только `ultra-dfu-app.zip`.
+Это пакет только с приложением: он не заменяет bootloader и SoftDevice.
+Не устанавливайте Lite-пакеты и не используйте full image.
 
-Keep an official `ultra-dfu-app.zip` package available before testing this
-build. If the new firmware is unsuitable, enter DFU mode and install the
-official package.
+Перед обновлением:
 
-## Downgrade note
+1. Зарядите устройство и подключите его исправным USB-кабелем напрямую к ПК.
+2. Сохраните важные дампы на ПК.
+3. Оставьте рядом
+   `ROLLBACK-official-dev-2026-05-15-ultra-dfu-app.zip`.
+4. Закройте другие программы, которые могут держать COM-порт.
 
-This build migrates the settings record from version 6 to version 7. An older
-official firmware detects the newer settings version and restores default
-button, BLE, animation and sleep settings. Slot data and tag dumps are stored
-separately and are not wiped by this settings reset.
+Войти в DFU можно командой `hw dfu` в CLI. Если приложение не запускается:
 
-## Compatibility expectation
+1. Отключите Chameleon и дождитесь сна.
+2. Удерживайте кнопку B.
+3. Подключите USB, продолжая удерживать B; на Windows подождите около 10 секунд.
+4. Отпустите B. Светодиоды 4 и 5 должны попеременно мигать зелёным.
 
-PR #274 makes MIFARE Classic emulation behave more like a physical card,
-including sector authentication and access-bit handling. It may improve
-compatibility with strict readers, but it cannot fix reader incompatibilities
-caused by RF coupling, antenna placement or analog timing.
+Прошить пакет можно через совместимый GUI или официальный `nrfutil`:
+
+```powershell
+nrfutil install device
+nrfutil device program --firmware ultra-dfu-app.zip --traits nordicDfu
+```
+
+Не отключайте USB во время записи. После перезапуска выполните `hw version`:
+в скобках должна отображаться версия `v2.2.0-cuv2.1`.
+
+## Первый тест
+
+Не перезаписывайте рабочий слот. Создайте отдельный MIFARE Classic 1K слот,
+загрузите тот же дамп, который работает на MF Gen2A, и проверьте домофон:
+
+1. Сначала разбудите Chameleon кнопкой.
+2. Проверьте карту вплотную к считывателю.
+3. Затем повторите тест на расстоянии 2-3 см и с другой ориентацией антенны.
+4. Сравните результат с официальной прошивкой и Gen2A.
+
+PR #274 делает эмуляцию MIFARE Classic ближе к поведению физической карты,
+включая состояния аутентификации сектора и access bits. Это наиболее
+релевантное изменение для строгих считывателей, но оно не исправит проблемы,
+вызванные RF-связью, положением антенны или аналоговыми таймингами.
+
+## Откат
+
+Если новая прошивка ведёт себя хуже, снова войдите в DFU и установите
+`ROLLBACK-official-dev-2026-05-15-ultra-dfu-app.zip` тем же способом.
+
+Эта сборка обновляет версию настроек с 6 до 7. После отката старая прошивка
+сбросит настройки кнопок, BLE, анимации и сна к значениям по умолчанию.
+Данные слотов и дампы хранятся отдельно и этим сбросом не удаляются.
