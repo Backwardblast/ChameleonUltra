@@ -176,7 +176,7 @@ static const uint8_t abTrailerAccessConditions[8][2] = {
 };
 
 static const uint8_t abDataAccessConditions[8][2] = {
-    { // 0 0 0    key A|B key A|B key A|B key A|B 
+    { // 0 0 0    key A|B key A|B key A|B key A|B
         /* Access with Key A */
         ACC_BLOCK_READ | ACC_BLOCK_WRITE | ACC_BLOCK_INCREMENT | ACC_BLOCK_DECREMENT,
         /* Access with Key B */
