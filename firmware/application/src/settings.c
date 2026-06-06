@@ -63,6 +63,10 @@ void settings_init_long_press_threshold_config(void) {
     config.long_press_threshold = SETTINGS_LONG_PRESS_THRESHOLD_DEFAULT_MS;
 }
 
+static void settings_init_watchdog_reset_count(void) {
+    config.watchdog_reset_count = 0;
+}
+
 void settings_init_config(void) {
     settings_update_version_for_config();
     config.animation_config = SettingsAnimationModeFull; // add on version1
@@ -72,6 +76,7 @@ void settings_init_config(void) {
     settings_init_ble_pairing_enable_config();
     settings_init_sleep_timeout_config();
     settings_init_long_press_threshold_config();
+    settings_init_watchdog_reset_count();
 }
 
 void settings_migrate(void) {
@@ -97,6 +102,9 @@ void settings_migrate(void) {
 
         case 6:
             settings_init_long_press_threshold_config();
+
+        case 7:
+            settings_init_watchdog_reset_count();
 
             /*
              * Add new migration steps ABOVE THIS COMMENT
@@ -327,4 +335,12 @@ void settings_set_long_press_threshold(uint16_t duration) {
         duration = SETTINGS_LONG_PRESS_THRESHOLD_MIN_MS;
     }
     config.long_press_threshold = duration;
+}
+
+uint32_t settings_get_watchdog_reset_count(void) {
+    return config.watchdog_reset_count;
+}
+
+void settings_increment_watchdog_reset_count(void) {
+    config.watchdog_reset_count++;
 }

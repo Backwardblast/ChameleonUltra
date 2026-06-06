@@ -50,6 +50,12 @@
 #define DATA_CMD_SET_SLEEP_TIMEOUT              (1040)
 #define DATA_CMD_GET_LONG_PRESS_THRESHOLD       (1041)
 #define DATA_CMD_SET_LONG_PRESS_THRESHOLD       (1042)
+#define DATA_CMD_GET_BOOTLOADER_VERSION         (1043)
+#define DATA_CMD_GET_FREE_MEMORY                (1044)
+#define DATA_CMD_GET_RESET_REASON               (1045)
+#define DATA_CMD_GET_FDS_STATUS                 (1046)
+#define DATA_CMD_GET_UPTIME                     (1047)
+#define DATA_CMD_GET_WATCHDOG_RESET_COUNT       (1048)
 
 //
 // ******************************************************************

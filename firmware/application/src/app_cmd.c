@@ -60,6 +60,61 @@ static data_frame_tx_t *cmd_processor_get_git_version(uint16_t cmd, uint16_t sta
     return data_frame_make(cmd, STATUS_SUCCESS, strlen(GIT_VERSION), (uint8_t *)GIT_VERSION);
 }
 
+#define BOOTLOADER_SETTINGS_ADDRESS    0xFE000UL
+#define DFU_SETTINGS_BL_VERSION_OFFSET 12U
+
+extern uint32_t app_get_reset_source(void);
+extern uint32_t app_get_uptime_ms(void);
+
+static data_frame_tx_t *cmd_processor_get_bootloader_version(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    uint32_t version = *((volatile uint32_t *)(BOOTLOADER_SETTINGS_ADDRESS + DFU_SETTINGS_BL_VERSION_OFFSET));
+    uint8_t payload[2] = {
+        (uint8_t)((version >> 8) & 0xFF),
+        (uint8_t)(version & 0xFF),
+    };
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), payload);
+}
+
+static data_frame_tx_t *cmd_processor_get_free_memory(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    register uint32_t stack_pointer __asm("sp");
+    extern uint32_t __HeapBase;
+    uint32_t free_bytes = stack_pointer - (uint32_t)&__HeapBase;
+    uint32_t payload = U32HTONL(free_bytes);
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), (uint8_t *)&payload);
+}
+
+static data_frame_tx_t *cmd_processor_get_reset_reason(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    uint32_t payload = U32HTONL(app_get_reset_source());
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), (uint8_t *)&payload);
+}
+
+static data_frame_tx_t *cmd_processor_get_fds_status(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    fds_stat_t stats;
+    if (fds_stat(&stats) != NRF_SUCCESS) {
+        return data_frame_make(cmd, STATUS_FLASH_READ_FAIL, 0, NULL);
+    }
+    uint8_t payload[12];
+    uint16_t values[] = {
+        stats.pages_available, stats.open_records, stats.valid_records,
+        stats.dirty_records, stats.words_used, stats.freeable_words,
+    };
+    for (size_t i = 0; i < ARRAYLEN(values); i++) {
+        payload[i * 2] = (uint8_t)(values[i] >> 8);
+        payload[i * 2 + 1] = (uint8_t)values[i];
+    }
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), payload);
+}
+
+static data_frame_tx_t *cmd_processor_get_uptime(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    uint32_t payload = U32HTONL(app_get_uptime_ms());
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), (uint8_t *)&payload);
+}
+
+static data_frame_tx_t *cmd_processor_get_watchdog_reset_count(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
+    uint32_t payload = U32HTONL(settings_get_watchdog_reset_count());
+    return data_frame_make(cmd, STATUS_SUCCESS, sizeof(payload), (uint8_t *)&payload);
+}
+
 
 static data_frame_tx_t *cmd_processor_get_device_model(uint16_t cmd, uint16_t status, uint16_t length, uint8_t *data) {
     uint8_t resp_data = hw_get_device_type();
@@ -3539,6 +3594,12 @@ static cmd_data_map_t m_data_cmd_map[] = {
     {    DATA_CMD_GET_ALL_SLOT_NICKS,           NULL,                        cmd_processor_get_all_slot_nicks,            NULL                   },
     {    DATA_CMD_GET_LONG_PRESS_THRESHOLD,     NULL,                        cmd_processor_get_long_press_threshold,      NULL                   },
     {    DATA_CMD_SET_LONG_PRESS_THRESHOLD,     NULL,                        cmd_processor_set_long_press_threshold,      NULL                   },
+    {    DATA_CMD_GET_BOOTLOADER_VERSION,       NULL,                        cmd_processor_get_bootloader_version,        NULL                   },
+    {    DATA_CMD_GET_FREE_MEMORY,              NULL,                        cmd_processor_get_free_memory,              NULL                   },
+    {    DATA_CMD_GET_RESET_REASON,             NULL,                        cmd_processor_get_reset_reason,             NULL                   },
+    {    DATA_CMD_GET_FDS_STATUS,               NULL,                        cmd_processor_get_fds_status,               NULL                   },
+    {    DATA_CMD_GET_UPTIME,                   NULL,                        cmd_processor_get_uptime,                   NULL                   },
+    {    DATA_CMD_GET_WATCHDOG_RESET_COUNT,     NULL,                        cmd_processor_get_watchdog_reset_count,     NULL                   },
 
 #if defined(PROJECT_CHAMELEON_ULTRA)
 

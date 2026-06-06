@@ -1139,6 +1139,32 @@ class HWVersion(DeviceRequiredUnit):
         model = ["Ultra", "Lite"][self.cmd.get_device_model()]
         print(f" - Chameleon {model}, Version: {fw_version} ({git_version})")
 
+@hw.command("diagnostics")
+class HWDiagnostics(DeviceRequiredUnit):
+    def args_parser(self) -> ArgumentParserNoExit:
+        parser = ArgumentParserNoExit()
+        parser.description = "Show CUv2 firmware diagnostics"
+        return parser
+
+    def on_exec(self, args: argparse.Namespace):
+        major, minor = self.cmd.get_bootloader_version()
+        free_memory = self.cmd.get_free_memory()
+        reset_reason = self.cmd.get_reset_reason()
+        fds = self.cmd.get_fds_status()
+        uptime_ms = self.cmd.get_uptime()
+        watchdog_count = self.cmd.get_watchdog_reset_count()
+
+        print(f" - Bootloader       : v{major}.{minor}")
+        print(f" - Free RAM estimate: {free_memory:,} bytes")
+        print(f" - Reset reason     : 0x{reset_reason:08X}")
+        print(f" - Uptime           : {uptime_ms / 1000:.1f} seconds")
+        print(f" - Watchdog resets  : {watchdog_count}")
+        print(
+            " - FDS              : "
+            f"{fds['valid_records']} valid, {fds['dirty_records']} dirty, "
+            f"{fds['open_records']} open, {fds['freeable_words']} reclaimable words"
+        )
+
 
 @hf_14a.command("config")
 class HF14AConfig(DeviceRequiredUnit):
@@ -10670,20 +10696,24 @@ class HfDesAuth(ReaderRequiredUnit):
         forced = (args.type or "").lower().replace("-", "")
         if forced in ("des",):
             if len(key) not in (8, 16):
-                print(f" {CR}[!] DES key must be 8 or 16 bytes{C0}"); return
+                print(f" {CR}[!] DES key must be 8 or 16 bytes{C0}")
+                return
             algo_code = 0 if len(key) == 8 else 1
             algo_name = "DES" if len(key) == 8 else "2TDEA"
         elif forced in ("2tdea", "tdea2"):
             if len(key) != 16:
-                print(f" {CR}[!] 2TDEA key must be 16 bytes{C0}"); return
+                print(f" {CR}[!] 2TDEA key must be 16 bytes{C0}")
+                return
             algo_code, algo_name = 1, "2TDEA"
         elif forced in ("aes", "aes128", "aes-128"):
             if len(key) != 16:
-                print(f" {CR}[!] AES-128 key must be 16 bytes{C0}"); return
+                print(f" {CR}[!] AES-128 key must be 16 bytes{C0}")
+                return
             algo_code, algo_name = 2, "AES-128"
         elif forced in ("3k3des", "3des", "tdea3"):
             if len(key) != 24:
-                print(f" {CR}[!] 3K3DES key must be 24 bytes{C0}"); return
+                print(f" {CR}[!] 3K3DES key must be 24 bytes{C0}")
+                return
             algo_code, algo_name = 3, "3K3DES"
         elif forced == "":
             # Infer from key length: 8→DES, 16→AES-128, 24→3K3DES
@@ -10694,7 +10724,8 @@ class HfDesAuth(ReaderRequiredUnit):
             elif len(key) == 24:
                 algo_code, algo_name = 3, "3K3DES"
             else:
-                print(f" {CR}[!] Key must be 8, 16 or 24 bytes (got {len(key)}){C0}"); return
+                print(f" {CR}[!] Key must be 8, 16 or 24 bytes (got {len(key)}){C0}")
+                return
         else:
             print(f" {CR}[!] Unknown type '{args.type}' — use des, 2tdea, aes, or 3k3des{C0}")
             return

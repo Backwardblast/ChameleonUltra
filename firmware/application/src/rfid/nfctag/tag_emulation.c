@@ -595,6 +595,8 @@ void tag_emulation_change_slot(uint8_t index, bool sense_disable) {
     g_is_tag_emulating = false;     // Reset the emulating flag
     tag_emulation_set_slot(index);  // Update the index of the activated card slot
     tag_emulation_load_data();      // Then reload the data of the card slot
+    // Never carry protocol state from the previous slot into a new activation.
+    nfc_tag_14a_set_state(NFC_TAG_STATE_14A_IDLE);
     if (sense_disable) {
         // According to the configuration of the new card slot, the monitoring status of our update
         tag_emulation_sense_run();

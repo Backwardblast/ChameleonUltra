@@ -48,8 +48,10 @@ NRF_LOG_MODULE_REGISTER();
 
 // Defining soft timers
 APP_TIMER_DEF(m_button_check_timer); // Timer for button debounce
+APP_TIMER_DEF(m_uptime_timer);
 
 static uint32_t m_last_btn_press = 0;
+static volatile uint32_t m_uptime_seconds = 0;
 
 static bool m_is_btn_long_press = false;
 
@@ -73,6 +75,14 @@ static uint32_t m_gpregret_val;
 
 extern bool g_is_low_battery_shutdown;
 
+uint32_t app_get_reset_source(void) {
+    return m_reset_source;
+}
+
+uint32_t app_get_uptime_ms(void) {
+    return m_uptime_seconds * 1000U;
+}
+
 
 /**@brief Function for assert macro callback.
  *
@@ -94,6 +104,19 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
  */
 static void app_timers_init(void) {
     ret_code_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
+}
+
+static void uptime_timer_handler(void *context) {
+    (void)context;
+    m_uptime_seconds++;
+}
+
+static void uptime_timer_init(void) {
+    ret_code_t err_code = app_timer_create(
+        &m_uptime_timer, APP_TIMER_MODE_REPEATED, uptime_timer_handler);
+    APP_ERROR_CHECK(err_code);
+    err_code = app_timer_start(m_uptime_timer, APP_TIMER_TICKS(1000), NULL);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -485,7 +508,7 @@ static void check_wakeup_src(void) {
         light_up_by_slot();
 
         // If no operation follows, wait for the timeout and then deep hibernate
-        sleep_timer_start(SLEEP_DELAY_MS_BUTTON_WAKEUP);
+        sleep_timer_start(settings_get_sleep_timeout());
     } else if ((m_reset_source & (NRF_POWER_RESETREAS_NFC_MASK | NRF_POWER_RESETREAS_LPCOMP_MASK)) ||
                (m_gpregret_val & RESET_ON_LF_FIELD_EXISTS_Msk)) {
         NRF_LOG_INFO("WakeUp from rfid field");
@@ -1009,6 +1032,7 @@ int main(void) {
     log_init();               // Log initialization
     gpio_te_init();           // Initialize GPIO matrix library
     app_timers_init();        // Initialize soft timer
+    uptime_timer_init();      // Track uptime independently of the 24-bit RTC wrap
     power_management_init();  // Power management initialization
     usb_cdc_init();           // USB cdc emulation initialization
     ble_slave_init();         // Bluetooth protocol stack initialization
@@ -1027,6 +1051,10 @@ int main(void) {
     on_data_frame_complete(on_data_frame_received);
 
     check_wakeup_src();       // Detect wake-up source and decide BLE broadcast and subsequent hibernation action according to the wake-up source
+    if (m_reset_source & NRF_POWER_RESETREAS_DOG_MASK) {
+        settings_increment_watchdog_reset_count();
+        settings_save_config();
+    }
     tag_mode_enter();         // Enter card emulation mode by default
 
     // usbd event listener

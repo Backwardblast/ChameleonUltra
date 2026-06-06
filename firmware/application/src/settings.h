@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#define SETTINGS_CURRENT_VERSION 7
+#define SETTINGS_CURRENT_VERSION 8
 #define SETTINGS_SLEEP_TIMEOUT_DEFAULT_S 8   // default wake timeout in seconds (matches SLEEP_DELAY_MS_BUTTON_WAKEUP)
 #define SETTINGS_SLEEP_TIMEOUT_MIN_S      5
 #define SETTINGS_SLEEP_TIMEOUT_MAX_S      60
@@ -62,6 +62,9 @@ typedef struct ALIGN_U32 {
     // 2 bytes (add on version7)
     uint16_t long_press_threshold; // long button press threshold in ms
 
+    // 4 bytes (add on version8)
+    uint32_t watchdog_reset_count;
+
     /*
      * Warning !!!!!!!!!!!!!!!!!!!!!! <-------------
      * If you need to add settings,
@@ -92,4 +95,6 @@ void settings_init_sleep_timeout_config(void);
 uint16_t settings_get_long_press_threshold(void);
 void settings_set_long_press_threshold(uint16_t duration);
 void settings_init_long_press_threshold_config(void);
+uint32_t settings_get_watchdog_reset_count(void);
+void settings_increment_watchdog_reset_count(void);
 #endif

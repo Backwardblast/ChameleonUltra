@@ -68,6 +68,47 @@ class ChameleonCMD:
         return resp
 
     @expect_response(Status.SUCCESS)
+    def get_bootloader_version(self):
+        resp = self.device.send_cmd_sync(Command.GET_BOOTLOADER_VERSION)
+        resp.parsed = struct.unpack("!BB", resp.data)
+        return resp
+
+    @expect_response(Status.SUCCESS)
+    def get_free_memory(self):
+        resp = self.device.send_cmd_sync(Command.GET_FREE_MEMORY)
+        resp.parsed = struct.unpack("!I", resp.data)[0]
+        return resp
+
+    @expect_response(Status.SUCCESS)
+    def get_reset_reason(self):
+        resp = self.device.send_cmd_sync(Command.GET_RESET_REASON)
+        resp.parsed = struct.unpack("!I", resp.data)[0]
+        return resp
+
+    @expect_response(Status.SUCCESS)
+    def get_fds_status(self):
+        resp = self.device.send_cmd_sync(Command.GET_FDS_STATUS)
+        values = struct.unpack("!6H", resp.data)
+        resp.parsed = dict(zip(
+            ("pages_available", "open_records", "valid_records",
+             "dirty_records", "words_used", "freeable_words"),
+            values,
+        ))
+        return resp
+
+    @expect_response(Status.SUCCESS)
+    def get_uptime(self):
+        resp = self.device.send_cmd_sync(Command.GET_UPTIME)
+        resp.parsed = struct.unpack("!I", resp.data)[0]
+        return resp
+
+    @expect_response(Status.SUCCESS)
+    def get_watchdog_reset_count(self):
+        resp = self.device.send_cmd_sync(Command.GET_WATCHDOG_RESET_COUNT)
+        resp.parsed = struct.unpack("!I", resp.data)[0]
+        return resp
+
+    @expect_response(Status.SUCCESS)
     def get_device_mode(self):
         resp = self.device.send_cmd_sync(Command.GET_DEVICE_MODE)
         if resp.status == Status.SUCCESS:
