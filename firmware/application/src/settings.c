@@ -68,6 +68,10 @@ static void settings_init_watchdog_reset_count(void) {
     config.watchdog_reset_count = 0;
 }
 
+static void settings_init_dfu_pending(void) {
+    config.dfu_pending = false;
+}
+
 void settings_init_config(void) {
     settings_update_version_for_config();
     config.animation_config = SettingsAnimationModeFull; // add on version1
@@ -78,6 +82,7 @@ void settings_init_config(void) {
     settings_init_sleep_timeout_config();
     settings_init_long_press_threshold_config();
     settings_init_watchdog_reset_count();
+    settings_init_dfu_pending();
 }
 
 void settings_migrate(void) {
@@ -113,6 +118,11 @@ void settings_migrate(void) {
 
         case 9:
             settings_init_watchdog_reset_count();
+
+        case 10:
+            // Version 10 used a GPREGRET2 marker that the bootloader clears.
+            settings_init_watchdog_reset_count();
+            settings_init_dfu_pending();
 
             /*
              * Add new migration steps ABOVE THIS COMMENT
@@ -352,6 +362,20 @@ uint32_t settings_get_watchdog_reset_count(void) {
 
 void settings_increment_watchdog_reset_count(void) {
     config.watchdog_reset_count++;
+}
+
+bool settings_mark_dfu_pending(void) {
+    config.dfu_pending = true;
+    return settings_save_config() == STATUS_SUCCESS;
+}
+
+bool settings_consume_dfu_pending(void) {
+    bool was_pending = config.dfu_pending;
+    if (was_pending) {
+        config.dfu_pending = false;
+        settings_save_config();
+    }
+    return was_pending;
 }
 
 bool settings_was_migrated(void) {

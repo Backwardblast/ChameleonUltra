@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#define SETTINGS_CURRENT_VERSION 10
+#define SETTINGS_CURRENT_VERSION 11
 #define SETTINGS_SLEEP_TIMEOUT_DEFAULT_S 8   // default wake timeout in seconds (matches SLEEP_DELAY_MS_BUTTON_WAKEUP)
 #define SETTINGS_SLEEP_TIMEOUT_MIN_S      5
 #define SETTINGS_SLEEP_TIMEOUT_MAX_S      60
@@ -43,7 +43,8 @@ typedef struct ALIGN_U32 {
     // 1 byte
     uint8_t animation_config : 2;
     uint8_t ble_pairing_enable : 1;
-    uint8_t reserved0 : 5; // If you are add switch field, reallocating me.
+    uint8_t dfu_pending : 1;
+    uint8_t reserved0 : 4; // If you are add switch field, reallocating me.
 
     // 1 byte
     uint8_t button_a_press : 4;
@@ -97,5 +98,7 @@ void settings_set_long_press_threshold(uint16_t duration);
 void settings_init_long_press_threshold_config(void);
 uint32_t settings_get_watchdog_reset_count(void);
 void settings_increment_watchdog_reset_count(void);
+bool settings_mark_dfu_pending(void);
+bool settings_consume_dfu_pending(void);
 bool settings_was_migrated(void);
 #endif
