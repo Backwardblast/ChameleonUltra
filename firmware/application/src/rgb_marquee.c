@@ -658,6 +658,208 @@ void rgb_marquee_symmetric_in(uint8_t color, uint8_t slot) {
     }
 }
 
+typedef struct {
+    uint8_t led;
+    uint8_t level;
+} showtime_pwm_led_t;
+
+static void showtime_frame(uint8_t color, uint8_t solid_mask,
+                           const showtime_pwm_led_t *pwm_leds, uint8_t pwm_count,
+                           uint16_t duration_ms) {
+    uint32_t *led_pins = hw_get_led_array();
+
+    nrfx_pwm_uninit(&pwm0_ins);
+    pwm_config.output_pins[0] = NRF_DRV_PWM_PIN_NOT_USED;
+    pwm_config.output_pins[1] = NRF_DRV_PWM_PIN_NOT_USED;
+    pwm_config.output_pins[2] = NRF_DRV_PWM_PIN_NOT_USED;
+    pwm_config.output_pins[3] = NRF_DRV_PWM_PIN_NOT_USED;
+    pwm_sequ_val.channel_0 = PWM_MAX;
+    pwm_sequ_val.channel_1 = PWM_MAX;
+    pwm_sequ_val.channel_2 = PWM_MAX;
+    pwm_sequ_val.channel_3 = PWM_MAX;
+    for (uint8_t i = 0; i < RGB_LIST_NUM; i++) {
+        nrf_gpio_pin_clear(led_pins[i]);
+    }
+
+    set_slot_light_color(color);
+    for (uint8_t i = 0; i < RGB_LIST_NUM; i++) {
+        if (solid_mask & (1U << i)) {
+            nrf_gpio_pin_set(led_pins[i]);
+        }
+    }
+
+    if (pwm_count > 4) {
+        pwm_count = 4;
+    }
+    for (uint8_t i = 0; i < pwm_count; i++) {
+        if (pwm_leds[i].led >= RGB_LIST_NUM ||
+                (solid_mask & (1U << pwm_leds[i].led))) {
+            continue;
+        }
+        pwm_config.output_pins[i] = led_pins[pwm_leds[i].led];
+        switch (i) {
+            case 0:
+                pwm_sequ_val.channel_0 = get_pwmduty(pwm_leds[i].level);
+                break;
+            case 1:
+                pwm_sequ_val.channel_1 = get_pwmduty(pwm_leds[i].level);
+                break;
+            case 2:
+                pwm_sequ_val.channel_2 = get_pwmduty(pwm_leds[i].level);
+                break;
+            case 3:
+                pwm_sequ_val.channel_3 = get_pwmduty(pwm_leds[i].level);
+                break;
+        }
+    }
+
+    if (pwm_count > 0) {
+        nrf_drv_pwm_init(&pwm0_ins, &pwm_config, NULL);
+        nrf_drv_pwm_simple_playback(&pwm0_ins, &seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+    }
+    bsp_delay_ms(duration_ms);
+}
+
+static void showtime_blackout(uint16_t duration_ms) {
+    showtime_frame(RGB_WHITE, 0, NULL, 0, duration_ms);
+}
+
+static void showtime_pair(uint8_t color, uint8_t left, uint8_t right,
+                          uint8_t level, uint16_t duration_ms) {
+    showtime_pwm_led_t leds[] = {
+        {left, level},
+        {right, level},
+    };
+    showtime_frame(color, 0, leds, left == right ? 1 : 2, duration_ms);
+}
+
+static void showtime_comet(uint8_t color, int8_t head, int8_t direction,
+                          uint16_t duration_ms) {
+    showtime_pwm_led_t tail[3] = {0};
+    uint8_t tail_count = 0;
+    uint8_t solid_mask = 0;
+
+    if (head >= 0 && head < RGB_LIST_NUM) {
+        solid_mask = 1U << head;
+    }
+    for (uint8_t i = 1; i <= 3; i++) {
+        int8_t led = head - (direction * i);
+        if (led < 0 || led >= RGB_LIST_NUM) {
+            continue;
+        }
+        tail[tail_count].led = led;
+        tail[tail_count].level = 82U - (i * 20U);
+        tail_count++;
+    }
+    showtime_frame(color, solid_mask, tail, tail_count, duration_ms);
+}
+
+void rgb_marquee_showtime_startup(uint8_t color, uint8_t slot) {
+    static const uint8_t charge_levels[] = {8, 16, 28, 44, 64, 86, 99};
+    static const uint8_t wave_colors[] = {
+        RGB_CYAN, RGB_BLUE, RGB_MAGENTA, RGB_WHITE
+    };
+
+    showtime_blackout(80);
+
+    // Charge a bright core in the center of the LED row.
+    for (uint8_t i = 0; i < sizeof(charge_levels); i++) {
+        showtime_pair((i < 4) ? RGB_BLUE : RGB_CYAN, 3, 4,
+                      charge_levels[i], 34);
+    }
+
+    // Release the core outwards with a rapid color climb.
+    for (uint8_t radius = 0; radius < 4; radius++) {
+        uint8_t left = 3 - radius;
+        uint8_t right = 4 + radius;
+        uint8_t inner_mask = 0;
+        showtime_pwm_led_t edge[] = {
+            {left, 99},
+            {right, 99},
+        };
+        for (uint8_t led = left + 1; led < right; led++) {
+            inner_mask |= 1U << led;
+        }
+        showtime_frame(wave_colors[radius], inner_mask, edge, 2, 70);
+    }
+
+    // White impact, then a short blackout makes the next motion feel sharper.
+    showtime_frame(RGB_WHITE, 0xFF, NULL, 0, 95);
+    showtime_blackout(45);
+    showtime_frame(RGB_WHITE, 0xFF, NULL, 0, 38);
+    showtime_blackout(55);
+
+    // Three beat-like comets cross the whole row.
+    for (int8_t head = -1; head <= 10; head++) {
+        showtime_comet(RGB_MAGENTA, head, 1, 38);
+    }
+    for (int8_t head = 8; head >= -3; head--) {
+        showtime_comet(RGB_CYAN, head, -1, 34);
+    }
+
+    // Collapse into the active slot and hand control back to normal indication.
+    for (uint8_t distance = 4; distance > 0; distance--) {
+        int8_t left = (int8_t)slot - distance;
+        int8_t right = (int8_t)slot + distance;
+        showtime_pwm_led_t leds[2];
+        uint8_t count = 0;
+        if (left >= 0) {
+            leds[count++] = (showtime_pwm_led_t) {left, 36};
+        }
+        if (right < RGB_LIST_NUM) {
+            leds[count++] = (showtime_pwm_led_t) {right, 36};
+        }
+        showtime_frame(color, 1U << slot, leds, count, 42);
+    }
+    showtime_pair(color, slot, slot, 99, 70);
+}
+
+void rgb_marquee_showtime_shutdown(uint8_t color, uint8_t slot, bool *keep_running) {
+    static const uint8_t pulse_levels[] = {99, 58, 90, 42, 72, 24};
+
+    // A syncopated pulse on the active slot starts the reverse sequence.
+    for (uint8_t i = 0; i < sizeof(pulse_levels); i++) {
+        if (!*keep_running) return;
+        showtime_pair(color, slot, slot, pulse_levels[i], 42);
+    }
+
+    // Pull light away from the active slot, alternating nightclub colors.
+    for (uint8_t radius = 1; radius < 8; radius++) {
+        if (!*keep_running) return;
+        int8_t left = (int8_t)slot - radius;
+        int8_t right = (int8_t)slot + radius;
+        showtime_pwm_led_t leds[2];
+        uint8_t count = 0;
+        if (left >= 0) {
+            leds[count++] = (showtime_pwm_led_t) {left, 99};
+        }
+        if (right < RGB_LIST_NUM) {
+            leds[count++] = (showtime_pwm_led_t) {right, 99};
+        }
+        showtime_frame((radius & 1U) ? RGB_MAGENTA : RGB_CYAN,
+                       0, leds, count, 48);
+    }
+
+    if (!*keep_running) return;
+    showtime_frame(RGB_WHITE, 0xFF, NULL, 0, 55);
+    showtime_blackout(35);
+    showtime_frame(RGB_BLUE, 0xFF, NULL, 0, 34);
+    showtime_blackout(45);
+
+    // Close the row back into a dim blue core before power-off.
+    for (uint8_t radius = 4; radius > 0; radius--) {
+        if (!*keep_running) return;
+        uint8_t mask = 0;
+        for (uint8_t led = 4 - radius; led < 4 + radius; led++) {
+            mask |= 1U << led;
+        }
+        showtime_frame(RGB_BLUE, mask, NULL, 0, 45);
+    }
+    showtime_pair(RGB_CYAN, 3, 4, 45, 70);
+    showtime_pair(RGB_BLUE, 3, 4, 16, 90);
+    showtime_blackout(0);
+}
+
 /**
  * @brief Whether the current lighting effect enables
  *

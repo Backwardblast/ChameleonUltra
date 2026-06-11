@@ -349,7 +349,9 @@ static void system_off_enter(void) {
             if (m_system_off_processing) rgb_marquee_sweep_fade(color, dir, 7, 50, 25);
             if (m_system_off_processing) rgb_marquee_sweep_fade(color, !dir, 7, 25, 0);
         } else if (animation_config == SettingsAnimationModeMinimal) {
-            if (m_system_off_processing) rgb_marquee_sweep_from_to(color, slot, !dir ? 7 : 0);
+            if (m_system_off_processing) {
+                rgb_marquee_showtime_shutdown(color, slot, &m_system_off_processing);
+            }
         } else if (animation_config == SettingsAnimationModeSymmetric) {
             if (m_system_off_processing) rgb_marquee_symmetric_in(color, slot);
         }
@@ -497,7 +499,7 @@ static void check_wakeup_src(void) {
             rgb_marquee_sweep_to(color, dir, 11);
             rgb_marquee_sweep_to(color, !dir, dir ? slot : 7 - slot);
         } else if (animation_config == SettingsAnimationModeMinimal) {
-            rgb_marquee_sweep_to(color, !dir, dir ? slot : 7 - slot);
+            rgb_marquee_showtime_startup(color, slot);
         } else if (animation_config == SettingsAnimationModeSymmetric) {
             rgb_marquee_symmetric_out(color, slot);
         } else {
@@ -570,9 +572,7 @@ static void check_wakeup_src(void) {
             rgb_marquee_sweep_to(1, dir, 11);
             rgb_marquee_sweep_to(2, !dir, 11);
         } else if (animation_config == SettingsAnimationModeMinimal) {
-            rgb_marquee_sweep_from_to(0, 0, 2);
-            rgb_marquee_sweep_from_to(1, 2, 5);
-            rgb_marquee_sweep_from_to(2, 5, 7);
+            rgb_marquee_showtime_startup(color, slot);
         } else if (animation_config == SettingsAnimationModeSymmetric) {
             rgb_marquee_symmetric_out(0, ~0);
             rgb_marquee_symmetric_in(1, ~0);
